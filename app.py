@@ -13,20 +13,21 @@ load_css()
 
 import base64
      
-def load_logo():
-    with open("assets/logo.png", "rb") as img_file:
-        logo_base64 = base64.b64encode(img_file.read()).decode()
+def load_miroir():
+    with open("assets/miroir.jpeg", "rb") as img_file:
+        miroir_base64 = base64.b64encode(img_file.read()).decode()
     
     st.markdown(
         f"""
-        <div class="logo-container">
-            <img src="data:image/png;base64,{logo_base64}" class="logo-img">
+        <div class="miroir-container">
+            <img src="data:image/jpeg;base64,{miroir_base64}" class="miroir-img">
         </div>
         """,
         unsafe_allow_html=True
     )
 
-load_logo()
+
+load_miroir()
 st.subheader("Le miroir intelligent qui comprend votre style")
 
 st.markdown("---")

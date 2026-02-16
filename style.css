@@ -1,6 +1,22 @@
 /* Fond général */
 /* Texte général */
 /* Logo arrondi */
+
+.miroir-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.miroir-img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0px 8px 25px rgba(0,0,0,0.15);
+}
+
+
 .logo-container {
     display: flex;
     justify-content: center;
