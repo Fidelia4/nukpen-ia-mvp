@@ -1,0 +1,77 @@
+/* Fond général */
+/* Texte général */
+/* Logo arrondi */
+.logo-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.logo-img {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0px 8px 25px rgba(0,0,0,0.15);
+}
+html, body, [class*="css"] {
+    color: #000000 !important;
+}
+
+/* Paragraphes */
+p {
+    color: #000000 !important;
+}
+
+/* Labels (radio, selectbox, uploader, etc.) */
+label {
+    color: #000000 !important;
+    font-weight: 500;
+}
+
+/* Titres secondaires */
+h2, h3, h4 {
+    color: #880e4f !important;
+}
+.stApp {
+    background: linear-gradient(135deg, #ffe6f0, #ffd6eb, #ffcce6);
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* Titres */
+h1 {
+    color: #c2185b;
+    text-align: center;
+    font-weight: 800;
+    color: black;
+}
+
+h2, h3 {
+    color: #ad1457;
+}
+
+/* Boutons */
+.stButton>button {
+    background-color: #ec407a;
+    color: white;
+    border-radius: 25px;
+    padding: 10px 20px;
+    border: none;
+    font-weight: bold;
+    transition: 0.3s ease;
+}
+
+.stButton>button:hover {
+    background-color: #d81b60;
+    transform: scale(1.05);
+}
+
+/* Boîtes résultat */
+.result-box {
+    background-color: white;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
+    margin-top: 20px;
+}
