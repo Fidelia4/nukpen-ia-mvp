@@ -1,6 +1,7 @@
 import streamlit as st
 from PIL import Image
 from analysis import analyze_outfit
+from html import escape
 
 st.set_page_config(page_title="Nukpɛń_IA", layout="wide")
 
@@ -37,6 +38,18 @@ col1, col2 = st.columns(2)
 with col1:
     st.markdown("### 📷 Choisissez une option")
 
+    provider = st.selectbox(
+        "Fournisseur IA",
+        ["Ollama (local gratuit)", "OpenAI", "OpenRouter", "Groq"],
+        help="Ollama fonctionne en local sans clé API. OpenAI: OPENAI_API_KEY, OpenRouter: OPENROUTER_API_KEY, Groq: GROQ_API_KEY (dans .env)."
+    )
+
+    model = st.text_input(
+        "Modèle (optionnel)",
+        value="",
+        help="Laisse vide pour utiliser le modèle par défaut du fournisseur."
+    )
+
     option = st.radio(
         "Source de l'image :",
         ["Importer une image", "Prendre une photo"]
@@ -65,17 +78,32 @@ with col1:
     )
 
     if image:
-        st.image(image, caption="Votre tenue", use_column_width=True)
+        st.image(image, caption="Votre tenue", width="stretch")
 
         if st.button("✨ Analyser ma tenue"):
             with st.spinner("Analyse en cours..."):
-                result = analyze_outfit(image, occasion)
+                result = analyze_outfit(
+                    image=image,
+                    occasion=occasion,
+                    provider="ollama" if provider.startswith("Ollama") else provider.lower(),
+                    model=model.strip() or None,
+                )
                 st.session_state["result"] = result
 
 with col2:
     if "result" in st.session_state:
         st.markdown("### 🧠 Résultat de l’analyse")
+        result_text = st.session_state["result"]
+
+        if result_text.startswith("⚠️ Réponse partielle du modèle"):
+            st.warning("État de la réponse : partielle")
+        elif result_text.startswith("⚠️"):
+            st.error("État de la réponse : erreur")
+        else:
+            st.success("État de la réponse : complète")
+
+        formatted_result = escape(result_text).replace("\n", "<br>")
         st.markdown(
-            f'<div class="result-box">{st.session_state["result"]}</div>',
+            f'<div class="result-box">{formatted_result}</div>',
             unsafe_allow_html=True
         )
