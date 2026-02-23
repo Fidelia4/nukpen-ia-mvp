@@ -40,8 +40,6 @@ nukpen_env\Scripts\activate     # Windows
 pip install --upgrade pip
 ```
 
----
-
 ## 3. Installation des dépendances Python
 
 Toutes les librairies nécessaires sont dans `requirements.txt`. Exemple de commande :
@@ -102,7 +100,7 @@ ollama pull llava:7b
 ## 6. Structure du projet
 
 ```
-nukpen_ia_mvp/
+nukpen_ia_mvp/ 
 ├── app.py               # Fichier principal Streamlit
 ├── analysis.py          # Module d'analyse avec IA
 ├── prompt.py            # Fonctions pour générer les prompts pour les IA
