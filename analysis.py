@@ -18,6 +18,22 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def _get_secret(name: str):
+    value = os.getenv(name)
+    if value:
+        return value.strip().strip('"').strip("'")
+
+    try:
+        import streamlit as st
+
+        if name in st.secrets:
+            return str(st.secrets[name]).strip().strip('"').strip("'")
+    except Exception:
+        pass
+
+    return None
+
 REQUIRED_STYLE_KEYS = [
     "description",
     "points_forts",
@@ -26,6 +42,30 @@ REQUIRED_STYLE_KEYS = [
     "coiffure",
     "maquillage",
 ]
+
+
+def _is_placeholder_value(val: str) -> bool:
+    v = (val or "").strip().lower()
+    if not v:
+        return True
+
+    # Placeholders simples
+    if v in {"0", "1", "2", "3", "n/a", "na", "none", "null", "-"}:
+        return True
+
+    # Nombres seuls (ex: 0.8, 1, 75, 0,82)
+    if re.fullmatch(r"\d+(?:[\.,]\d+)?", v):
+        return True
+
+    # Tableaux numériques (ex: [0.49, 0.39, 0.57])
+    if re.fullmatch(r"\[\s*\d+(?:[\.,]\d+)?(?:\s*,\s*\d+(?:[\.,]\d+)?)*\s*\]", v):
+        return True
+
+    # Très court = souvent non exploitable
+    if len(v) < 8:
+        return True
+
+    return False
 
 
 def _is_incomplete_result(text: str) -> bool:
@@ -52,9 +92,9 @@ def _build_client(provider: str):
     provider = (provider or "openai").lower()
 
     if provider == "openrouter":
-        api_key = os.getenv("OPENROUTER_API_KEY")
+        api_key = _get_secret("OPENROUTER_API_KEY")
         if not api_key:
-            return None, "⚠️ Clé manquante. Ajoute OPENROUTER_API_KEY dans le fichier .env."
+            return None, "⚠️ Clé manquante. Ajoute OPENROUTER_API_KEY dans Streamlit Secrets (prod) ou .env (local)."
 
         client = OpenAI(
             api_key=api_key,
@@ -63,9 +103,9 @@ def _build_client(provider: str):
         return client, None
 
     if provider == "groq":
-        api_key = os.getenv("GROQ_API_KEY")
+        api_key = _get_secret("GROQ_API_KEY")
         if not api_key:
-            return None, "⚠️ Clé manquante. Ajoute GROQ_API_KEY dans le fichier .env."
+            return None, "⚠️ Clé manquante. Ajoute GROQ_API_KEY dans Streamlit Secrets (prod) ou .env (local)."
 
         client = OpenAI(
             api_key=api_key,
@@ -73,9 +113,9 @@ def _build_client(provider: str):
         )
         return client, None
 
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = _get_secret("OPENAI_API_KEY")
     if not api_key:
-        return None, "⚠️ Clé manquante. Ajoute OPENAI_API_KEY dans le fichier .env."
+        return None, "⚠️ Clé manquante. Ajoute OPENAI_API_KEY dans Streamlit Secrets (prod) ou .env (local)."
 
     client = OpenAI(api_key=api_key)
     return client, None
@@ -190,21 +230,11 @@ def _extract_style_dict(text: str) -> dict:
 
 
 def _missing_style_keys(style_data: dict) -> list[str]:
-    def _is_placeholder(val: str) -> bool:
-        v = (val or "").strip().lower()
-        if not v:
-            return True
-        if v in {"0", "1", "2", "3", "n/a", "na", "none", "null", "-"}:
-            return True
-        if re.fullmatch(r"\d+", v):
-            return True
-        return False
-
     missing = []
     for key in REQUIRED_STYLE_KEYS:
         val = str(style_data.get(key, "")).strip()
         # Trop court = potentiellement incomplet
-        if len(val) < 30 or _is_placeholder(val):
+        if len(val) < 30 or _is_placeholder_value(val):
             missing.append(key)
     return missing
 
@@ -214,7 +244,16 @@ def _merge_style_dict(base: dict, extra: dict) -> dict:
     for key in REQUIRED_STYLE_KEYS:
         base_val = str(merged.get(key, "")).strip()
         extra_val = str(extra.get(key, "")).strip()
-        if extra_val and (not base_val or len(base_val) < len(extra_val)):
+        if not extra_val:
+            continue
+
+        # Remplacer toujours un placeholder par un vrai texte
+        if _is_placeholder_value(base_val) and not _is_placeholder_value(extra_val):
+            merged[key] = extra_val
+            continue
+
+        # Sinon prendre la version la plus riche
+        if not base_val or len(base_val) < len(extra_val):
             merged[key] = extra_val
     return merged
 
@@ -282,6 +321,7 @@ Contraintes:
 - 2 phrases minimum par clé.
 - Conseils concrets (couleurs, coupe, texture, accessoires).
 - Si un détail est incertain, écris une hypothèse + une alternative.
+- Interdiction des scores numériques, probabilités, tableaux, vecteurs ou placeholders (0, 1, 2, etc.).
 - Pas de markdown, pas de texte hors JSON.
 """.strip()
 
@@ -338,6 +378,12 @@ def _analyze_with_ollama(img_base64: str, occasion: str, model_name: str):
             return content
         if not style_data and not _is_incomplete_result(content):
             return content
+
+        # Si moondream renvoie partiel/inexploitable, bascule vers llava:7b
+        if model_name == "moondream":
+            retry = _analyze_with_ollama(img_base64, occasion, "llava:7b")
+            if not retry.startswith("⚠️"):
+                return "ℹ️ Moondream a produit une sortie partielle, bascule automatique sur llava:7b.\n\n" + retry
 
         # 1 tentative de réparation
         missing = _missing_style_keys(style_data) if style_data else REQUIRED_STYLE_KEYS
